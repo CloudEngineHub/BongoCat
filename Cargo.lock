@@ -966,8 +966,6 @@ dependencies = [
 name = "bongocat-packaging"
 version = "2.4.0"
 dependencies = [
- "bongocat-config",
- "bongocat-update",
  "cargo-packager",
  "cargo-packager-updater",
  "flate2",

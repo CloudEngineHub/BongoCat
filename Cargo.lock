@@ -794,7 +794,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-app"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "async-io",
  "atomic-write-file",
@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-audio"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "rodio",
  "thiserror 2.0.21",
@@ -838,7 +838,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-config"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-input",
  "bongocat-storage",
@@ -852,7 +852,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-i18n"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "rust-i18n",
  "serde_json",
@@ -860,7 +860,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-input"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "schemars",
  "serde",
@@ -868,8 +868,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "bongocat-input-source"
+version = "1.0.0"
+dependencies = [
+ "bongocat-plugin-sdk",
+ "libc",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-foundation 0.3.2",
+ "serde_json",
+ "thiserror 2.0.21",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "bongocat-key-sounds"
+version = "1.0.0"
+dependencies = [
+ "bongocat-plugin-sdk",
+ "rodio",
+]
+
+[[package]]
 name = "bongocat-live2d"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-live2d-playback",
  "bongocat-live2d-render",
@@ -885,7 +909,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-live2d-playback"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -894,7 +918,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-live2d-render"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-model",
  "bongocat-render",
@@ -904,7 +928,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-log"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-storage",
  "tempfile",
@@ -913,7 +937,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-model"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "proptest",
  "serde",
@@ -924,7 +948,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-model-store"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-model",
  "bongocat-render",
@@ -941,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-overlay"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "block2 0.6.2",
  "bongocat-input",
@@ -964,7 +988,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-packaging"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "cargo-packager",
  "cargo-packager-updater",
@@ -979,7 +1003,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-platform"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "arboard",
  "async-io",
@@ -1013,7 +1037,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-plugin-hud"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-plugin-sdk",
  "fontdue",
@@ -1022,7 +1046,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-plugin-manager"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "atomic-write-file",
  "base64 0.23.1",
@@ -1041,18 +1065,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "bongocat-plugin-packaging"
+version = "2.4.1"
+dependencies = [
+ "base64 0.23.1",
+ "bongocat-plugin-sdk",
+ "flate2",
+ "minisign 0.10.0",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "thiserror 2.0.21",
+ "zip 9.0.2",
+]
+
+[[package]]
 name = "bongocat-plugin-sdk"
 version = "0.1.0"
-source = "git+https://github.com/ayangweb/BongoCat-Plugins?rev=c75af662eec3aef21c16db202849eeb961e9c18d#c75af662eec3aef21c16db202849eeb961e9c18d"
 dependencies = [
  "serde",
  "serde_json",
- "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "bongocat-plugin-service"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "async-channel",
  "bongocat-plugin-hud",
@@ -1065,8 +1104,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bongocat-pomodoro"
+version = "1.0.0"
+dependencies = [
+ "bongocat-plugin-sdk",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bongocat-render"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-input",
  "thiserror 2.0.21",
@@ -1074,7 +1122,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-runtime"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-audio",
  "bongocat-input",
@@ -1091,7 +1139,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-storage"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "atomic-write-file",
  "tempfile",
@@ -1099,7 +1147,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-ui"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "async-channel",
  "bongocat-config",
@@ -1109,7 +1157,6 @@ dependencies = [
  "bongocat-plugin-sdk",
  "bongocat-plugin-service",
  "bongocat-ui-protocol",
- "dirs 7.0.0",
  "gpui-kit",
  "image",
  "serde",
@@ -1120,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-ui-protocol"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "async-channel",
  "bongocat-input",
@@ -1129,7 +1176,7 @@ dependencies = [
 
 [[package]]
 name = "bongocat-update"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "bongocat-config",
  "cargo-packager",
@@ -1277,7 +1324,7 @@ dependencies = [
  "hex",
  "image",
  "md5",
- "minisign",
+ "minisign 0.7.9",
  "once_cell",
  "os_pipe",
  "plist",
@@ -2419,6 +2466,12 @@ dependencies = [
  "smallvec",
  "zune-inflate",
 ]
+
+[[package]]
+name = "extended"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af9673d8203fcb076b19dfd17e38b3d4ae9f44959416ea532ce72415a6020365"
 
 [[package]]
 name = "fastrand"
@@ -5154,6 +5207,18 @@ checksum = "26541387415a1e829df5d532aad019fb11bc723e2b5bc99edefa4cf5bfad0de7"
 dependencies = [
  "ct-codecs",
  "getrandom 0.2.17",
+ "rpassword",
+ "scrypt",
+]
+
+[[package]]
+name = "minisign"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3062dbbf4d8f57899e2252804f7512a4fd89c8211c58fa6c786d38794a0c809d"
+dependencies = [
+ "ct-codecs",
+ "getrandom 0.4.3",
  "rpassword",
  "scrypt",
 ]
@@ -8196,7 +8261,9 @@ checksum = "5773a4c030a19d9bfaa090f49746ff35c75dfddfa700df7a5939d5e076a57039"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
+ "symphonia-codec-pcm",
  "symphonia-core",
+ "symphonia-format-riff",
  "symphonia-metadata",
 ]
 
@@ -8213,6 +8280,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "symphonia-codec-pcm"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e89d716c01541ad3ebe7c91ce4c8d38a7cf266a3f7b2f090b108fb0cb031d95"
+dependencies = [
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
 name = "symphonia-core"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8223,6 +8300,18 @@ dependencies = [
  "bytemuck",
  "lazy_static",
  "log",
+]
+
+[[package]]
+name = "symphonia-format-riff"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2d7c3df0e7d94efb68401d81906eae73c02b40d5ec1a141962c592d0f11a96f"
+dependencies = [
+ "extended",
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
 ]
 
 [[package]]

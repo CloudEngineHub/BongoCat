@@ -118,14 +118,15 @@ const MODEL_DIRECTORY: &str = "models";
 const SWIFT_RESOURCE_BUNDLE: &str = "PermissionFlow_PermissionFlow.bundle";
 /// Repository-relative directory holding the macOS `Info.plist` overlay.
 const MACOS_INFO_PLIST: &str = "macos/Info.plist";
-/// Repository-relative NSIS translation of the installer messages `cargo-packager` ships no text for.
+/// Repository-relative NSIS translations of the installer messages `cargo-packager` ships no text for.
 const VIETNAMESE_INSTALLER_STRINGS: &str = "crates/bongocat-packaging/installer/Vietnamese.nsh";
+const RUSSIAN_INSTALLER_STRINGS: &str = "crates/bongocat-packaging/installer/Russian.nsh";
 /// NSIS installer languages, one per application language and in the order the picker lists them.
 ///
 /// The set is the application's own language list (`bongocat-i18n` catalogs). English comes
 /// first because NSIS falls back to the first language when the system language is not listed,
 /// and `tools/tests/test_packaging_contract.py` keeps this list equal to the catalog set.
-const INSTALLER_LANGUAGES: [&str; 8] = [
+const INSTALLER_LANGUAGES: [&str; 9] = [
     "English",
     "SimpChinese",
     "TradChinese",
@@ -134,6 +135,7 @@ const INSTALLER_LANGUAGES: [&str; 8] = [
     "PortugueseBR",
     "Korean",
     "French",
+    "Russian",
 ];
 /// Repository-relative build provenance generator.
 const PROVENANCE_GENERATOR: &str = "tools/record-provenance.py";
@@ -179,14 +181,13 @@ const RESOURCE_STAGING_DIRECTORY: &str = "resource-stage";
 /// Ad-hoc signature used when no distribution identity is provisioned.
 ///
 /// It keeps the bundle and disk image integrity verifiable locally and in CI.
-/// Distribution signing, hardened runtime and notarization stay separate release
-/// gates.
+/// Paid OS distribution signing is intentionally not a release gate.
 const ADHOC_SIGNING_IDENTITY: &str = "-";
 /// Overrides the macOS signing identity for release builds.
 ///
 /// Signing certificates cannot be committed, so the release pipeline injects the
-/// real identity through this variable. It is a credential injection point, not
-/// a hidden build step: an unset or empty value keeps the ad-hoc identity.
+/// real identity through this optional variable. It is a credential injection
+/// point, not a hidden build step: an unset or empty value keeps the ad-hoc identity.
 const MACOS_SIGNING_IDENTITY_VARIABLE: &str = "BONGOCAT_MACOS_SIGNING_IDENTITY";
 /// Selected through `--environment`; `production` is the release default.
 const BUILD_ENVIRONMENTS: [&str; 2] = ["development", "production"];
@@ -939,12 +940,15 @@ fn packaging_config(
 ///
 /// The picker only changes the wizard's own text and the uninstaller reuses the stored choice;
 /// the application language still follows its own setting. NSIS preselects the system language
-/// and falls back to English. `cargo-packager` embeds every language except Vietnamese, which
-/// the repository supplies.
+/// and falls back to English. `cargo-packager` embeds no translations for Vietnamese or Russian,
+/// so the repository supplies them.
 fn windows_installer(workspace: &Path) -> NsisConfig {
     let mut nsis = NsisConfig::new()
         .languages(INSTALLER_LANGUAGES)
-        .custom_language_files([("Vietnamese", workspace.join(VIETNAMESE_INSTALLER_STRINGS))])
+        .custom_language_files([
+            ("Vietnamese", workspace.join(VIETNAMESE_INSTALLER_STRINGS)),
+            ("Russian", workspace.join(RUSSIAN_INSTALLER_STRINGS)),
+        ])
         .display_language_selector(true);
     // Per-user install: no administrator prompt, no machine-level registry keys.
     nsis.install_mode = NSISInstallerMode::CurrentUser;
@@ -1899,8 +1903,8 @@ fn generate_signing_key(path: &Path) -> Result<Vec<PathBuf>> {
     println!("  Keep it offline and never commit it. In CI it is the value of");
     println!("  the {SIGNING_PRIVATE_KEY_VARIABLE} secret.");
     println!("Public key:  {}", public.display());
-    println!("  Not a secret. Paste this single line into RELEASE_SIGNING_KEY in");
-    println!("  crates/bongocat-update/src/runtime.rs:");
+    println!("  Not a secret. Replace the contents of");
+    println!("  release-trust/app.pub with this single line:");
     println!();
     println!("{}", keypair.pk);
     if passphrase.is_empty() {
@@ -2455,11 +2459,11 @@ fn report(summary: &str, artifacts: &[PathBuf]) {
 mod tests {
     use super::{
         INSTALLER_LANGUAGES, MODEL_DIRECTORY, OUTPUT_DIRECTORY, PRESET_MODELS, PRODUCT_NAME,
-        ReleaseTarget, is_packaging_junk,
+        RUSSIAN_INSTALLER_STRINGS, ReleaseTarget, VIETNAMESE_INSTALLER_STRINGS, is_packaging_junk,
     };
 
     /// The wizard has to offer the picker, keep English first as the fallback, and carry
-    /// translated installer messages for the one language `cargo-packager` embeds none for.
+    /// translated installer messages for the languages `cargo-packager` embeds none for.
     #[test]
     fn the_windows_installer_offers_every_language_with_english_as_the_fallback() {
         let workspace = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -2477,9 +2481,21 @@ mod tests {
         );
 
         let custom = nsis.custom_language_files.expect("custom language files");
-        assert_eq!(custom.len(), 1);
-        let vietnamese = custom.get("Vietnamese").expect("Vietnamese strings");
-        assert!(vietnamese.is_file(), "{} must exist", vietnamese.display());
+        assert_eq!(custom.len(), 2);
+        for (language, path) in [
+            ("Vietnamese", VIETNAMESE_INSTALLER_STRINGS),
+            ("Russian", RUSSIAN_INSTALLER_STRINGS),
+        ] {
+            let strings = custom
+                .get(language)
+                .unwrap_or_else(|| panic!("{language} strings"));
+            assert!(
+                strings.ends_with(path),
+                "{} must point at {path}",
+                strings.display()
+            );
+            assert!(strings.is_file(), "{} must exist", strings.display());
+        }
     }
 
     /// The repair command is shell, and nothing in the build runs it, so `bash -n`

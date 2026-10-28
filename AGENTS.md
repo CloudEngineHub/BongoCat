@@ -19,22 +19,26 @@
 - Bundle ID 固定 `com.ayangweb.bongo-cat`。Development 与 Production 共用数据结构、使用不同存储根；开发构建不得读取、写入或锁住生产数据。
 - 不引入 Tauri、WebView、Node.js、JavaScript 或第二套 UI framework。
 
-### 1.1 独立插件仓库
+### 1.1 单仓库插件开发与发布
 
-- 官方插件、插件 SDK、插件打包、签名与 Tag Release 的唯一来源是
-  `https://github.com/ayangweb/BongoCat-Plugins`。本仓库只保留插件宿主、Plugin Center、安装与生命周期、存储和 overlay 集成。
-- 完整的人类协作流程、联合调试命令和发布边界见 `CONTRIBUTING.md` 与 `CONTRIBUTING.zh-CN.md`；处理插件相关任务前必须阅读对应章节。
-- 不需要把插件源码放进本仓库。`just dev`、`just dev-smoke` 和 `just plugin-tests` 会优先使用
-  `BONGOCAT_PLUGINS_ROOT`；未设置时，`tools/dev_plugins.py` 会把插件仓库克隆到
-  `target/plugin-dev/BongoCat-Plugins`，检出 `Cargo.toml` 中 SDK 固定的完整 revision，并只构建当前主机平台。
-- 修改官方插件实现、插件 UI 或插件业务逻辑时，在独立的 `BongoCat-Plugins` 仓库创建分支和 PR，不要把插件源码复制回本仓库。有写权限的维护者可以直接克隆上游；其他开发者必须先 fork `BongoCat-Plugins`，从 `upstream/master` 建分支，推送到自己的 fork 后向上游开 PR。联合调试时显式设置
-  `BONGOCAT_PLUGINS_ROOT=/path/to/BongoCat-Plugins`，指向实际使用的上游或 fork checkout；该路径允许包含未提交的插件改动，自动管理的克隆则必须保持干净。
-- 只修改官方插件实现时，不提升本仓库的 SDK revision，也不要求先发布插件 Tag 或 Release；本仓库通过 Git revision 使用 SDK，与插件发布版本相互独立。
-- 修改插件 SDK、进程协议或宿主接口时，先在插件仓库完成并合并 SDK 改动，再在本仓库把
-  `bongocat-plugin-sdk` 的 `rev` 更新为新的完整 40 位 commit SHA，同步 `Cargo.lock`，并运行
-  `just check` 与带插件 checkout 的 `just plugin-tests`。不得使用分支、Tag 或未固定 revision。
-- 插件 PR 尚未合并时，如需联调未发布的 SDK，可仅在本地临时把 `bongocat-plugin-sdk` 指向插件 checkout 的 `path`，或指向贡献者 fork 的完整 commit；这类依赖修改和对应的 `Cargo.lock` 变化不得提交。插件改动合并后，本仓库必须改回上游仓库的完整 commit SHA。
-- 未经用户明确要求，不得在任一仓库 commit、push、打插件 Tag、创建插件 Release 或修改签名配置。
+- 官方插件、插件 SDK、插件打包、签名工具和发布工作流的唯一源码是本仓库。
+- `just dev`、`just dev-smoke` 和 `just plugin-tests` 直接构建本仓库 `plugins/` 下的当前主机
+  平台产物，并由 workspace 内的插件打包工具生成开发 catalog。
+- 插件仍是独立可执行进程，不进入应用进程，也不链接进应用二进制；应用只保留插件协议消费、
+  Plugin Center、安装与生命周期、存储和 overlay 集成。
+- 应用 Release 使用 `v*` tag 与 `releases/latest`；插件 Release 使用 `plugins-v*` tag，并且
+  必须显式非 Latest。插件包位于对应不可变 Release，生产 catalog 固定读取
+  `plugin-catalog` 分支的签名 `plugins.json`。
+- 插件 catalog、插件签名密钥和应用更新签名密钥彼此独立。发布顺序固定为构建全部平台插件、
+  验证包与状态、签名并验证 catalog、发布非 Latest Release、重新下载校验，最后更新
+  `plugin-catalog` 分支。
+- 插件版本和历史由 `plugins/release-state.json` 的 Release 资产约束。首个
+  `plugins-v1.0.0` 由当前源码完整构建；同版本源码变化必须提升插件版本，不得放宽不可变检查。
+- 插件发布在 `master` 上完成：依次更新插件版本与 `plugins/CHANGELOG*.md` 的发布日期，提交标题
+  必须逐字为 `chore: release plugins-v<version>`，再打同名附注 tag。发布 commit 只包含版本与
+  修订日期等发布元数据；功能修复必须先单独提交。
+- 不得把插件源码或资源加入应用 bundle，也不得把应用更新签名密钥用于插件。未经用户明确
+  要求，不得 commit、push、打插件 Tag、创建插件 Release 或修改签名配置。
 
 ## 2. 任务流程
 
@@ -76,7 +80,7 @@
 ### 3.1 阶段推进
 
 - 每次只推进一个最小闭环；新增能力先有自动化 contract 或 ADR，再进入实现。ADR-0011 允许已通过自动化 contract 且不依赖缺失外部证据的模块先进入正式实现。
-- 门禁未过的能力不得宣称完成（Live2D、输入可靠性、双平台渲染等）；未取得 Cubism 书面授权、SDK 分发、实机输入/UI/GPU、签名、Windows 实机安装升级卸载与 soak 证据时，不得分发含受限 artifact 的安装包。
+- 门禁未过的能力不得宣称完成（Live2D、输入可靠性、双平台渲染等）；未取得 Cubism 书面授权、SDK 分发、实机输入/UI/GPU、更新签名、Windows 实机安装升级卸载与 soak 证据时，不得分发含受限 artifact 的安装包。操作系统代码签名与公证不属于发布门禁。
 - 不批量迁移历史功能，不为目录美观预建空 crate，未经授权不删除历史源码和行为对照。
 - `config.json` 与 window state 显式带 `schema_version: 1`，保留单一严格解析入口：非 1 明确拒绝，不静默转换。
 - 不做旧 Tauri/Pinia 格式的兼容、探测、字段 alias、自动导入或目录 fallback，也不为开发期中间版本写迁移分支。
@@ -202,7 +206,7 @@ just schema                                             # 从 Rust 类型生成�
 
 - 不在 `Justfile`、CI 或文档中重实现平台判断、目录复制、`Info.plist` 注入、`.app`/`.dmg`/NSIS 组装或版本解析；不重新引入 `scripts/` 或自维护 `.nsi`。
 - 版本号只来自 `[workspace.package].version`；平台与产物集合由 `crates/bongocat-packaging` 声明，并与 `tools/tests/test_packaging_contract.py`、`deny.toml`、`bongocat-update::UpdateTargetTriple` 保持一致。
-- 更新载荷组装与签名属于该 crate，`SIGNING_PRIVATE_KEY` 与 `SIGNING_PRIVATE_KEY_PASSWORD` 是唯一注入点；未设置则跳过签名，release workflow 断言发布构建已签名。签名必须是最后一步，签名后不得改名、重压缩或 strip；私钥不得进入源码、产物或日志，公钥写入 `bongocat-update::RELEASE_SIGNING_KEY`。
+- 更新载荷组装与签名属于该 crate，`SIGNING_PRIVATE_KEY` 与 `SIGNING_PRIVATE_KEY_PASSWORD` 是唯一注入点；未设置则跳过签名，release workflow 断言发布构建已签名。签名必须是最后一步，签名后不得改名、重压缩或 strip；私钥不得进入源码、产物或日志。应用与插件公钥分别以 `release-trust/app.pub`、`release-trust/plugin.pub` 为版本化事实来源，并在编译期嵌入对应常量，不得在运行时从可配置路径读取。
 - 每次 `just build` 只写当前 target 的 fragment（`<os>-<arch>.json`），运行时只请求共享 `latest.json`，多 target 发布必须先执行 `just manifest`；不在 CI 或脚本里拼 manifest JSON。
 - 细节与退出条件见 ADR-0033、ADR-0034 与 `docs/update-signing-guide.md`。
 
@@ -212,7 +216,7 @@ just schema                                             # 从 Rust 类型生成�
 - Renderer 不阻塞 runtime，鼠标移动不阻塞释放边沿。
 - 模型加载/切换失败不破坏当前可用模型；配置写入或损坏恢复不丢失当前环境的可用配置或用户模型。
 - 退出不依赖强杀，所有 worker 在超时内 join；8 小时 soak 无持续内存、GPU、handle、线程或日志增长。
-- scaffold 不等于功能完成；编译通过不等于平台行为完成；单个模型通过不等于模型兼容完成；增加超时不等于修复 issue #47；未验证签名、权限和回滚不等于可发布。
+- scaffold 不等于功能完成；编译通过不等于平台行为完成；单个模型通过不等于模型兼容完成；增加超时不等于修复 issue #47；未验证更新签名、权限和回滚不等于可发布。操作系统代码签名与公证不属于发布门禁。
 
 ### 9.4 文档与验收
 

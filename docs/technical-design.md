@@ -126,22 +126,18 @@ Rust 2024 edition application
   与 Toggle 可交互，分别发送 Action 与布尔配置修改；Integer、Select 在该窗口只作展示。
 - 插件按需分发：清单与包来自 GitHub release 资源，复用 `bongocat-update` 的代理前缀、
   HTTPS 与 Minisign 校验；主程序安装包不预置插件资源。
-- 插件 SDK、官方插件源码、ZIP 打包、签名、目录生成和 Git Tag Release 全部由独立仓库
-  `ayangweb/BongoCat-Plugins` 维护；主应用只通过固定 Git revision 使用 SDK，不包含官方插件源码
-  或插件发布工作流。Development 的 `just dev` / `just dev-smoke` 通过
-  `tools/dev_plugins.py` 定位 `BONGOCAT_PLUGINS_ROOT`；未设置时克隆插件仓库到
-  `target/plugin-dev/BongoCat-Plugins`，自动 clone 固定在与 SDK 相同的完整 revision，调用其
-  `catalog dev` 生成当前主机平台的本地目录，再以 `BONGOCAT_PLUGIN_DEV_DIRECTORY` 注入应用。
-  显式指定插件仓库路径时不改写该工作树，供开发者测试未发布插件。官方插件仍只由插件仓库构建，
-  主应用不包含插件源码。
+- 插件 SDK、官方插件源码、ZIP 打包、签名工具和插件发布工作流都是本仓库的 workspace 成员；
+  插件仍以独立可执行进程运行，主应用的安装包不包含插件源码或插件资源。Development 的
+  `just dev` / `just dev-smoke` 由 `tools/dev_plugins.py` 直接构建当前主机平台插件到
+  `target/plugin-dev`，再以 `BONGOCAT_PLUGIN_DEV_DIRECTORY` 注入应用。
   Development 启动后由产品自身的安装目录发现可用插件，不自动安装或重新安装已卸载的插件。
-  生产环境从
-  `BongoCat-Plugins` 的签名 `plugins.json` 发现列表；两个环境复用插件中心的安装、更新、启用、
-  禁用和卸载路径。
+  生产环境从 `plugin-catalog` 分支的签名 `plugins.json` 发现列表；两个环境复用插件中心的
+  安装、更新、启用、禁用和卸载路径。
   清单按插件 ID 选择最新兼容版本，展示已安装/可用版本；网络与目录 IO 不阻塞 tick/action owner。
   番茄时钟、按键音效、输入法状态均声明 `app_versions: ">=2.3.1"`，不限制应用的最高版本。
-  Production 不读取本地目录。签名清单与各平台 ZIP 由插件仓库的 Git Tag 流水线组装，未发布签名
-  资源时显示可重试错误，不回退到未签名数据。
+  Production 不读取本地目录。插件 Release 使用 `plugins-v*` tag，并显式保持非 Latest；
+  各平台 ZIP 位于对应不可变 Release，签名 catalog 在 Release 重新下载校验通过后写入
+  `plugin-catalog` 分支。未发布签名资源时显示可重试错误，不回退到未签名数据。
 - 首个验证插件是番茄时钟（#996）：它在模型窗口显示独立倒计时区域，并与插件的开始、暂停、重置
   保持同步。按键音效（#90，英文名 Key Sounds）也作为独立插件维护音频、音量、
   限流和设备生命周期；鼠标音效在新建、重置配置或缺少对应字段时默认开启，保留已保存的关闭选择；runtime
@@ -278,10 +274,11 @@ GPUI 仍是 pre-1.0，公共渲染 API 也没有稳定的 Windows/macOS 外部 L
   `appearance_changed` 中更新；也不复用 gpui 的外观名映射，因为它不识别
   `AccessibilityHighContrastDarkAqua`，会把开启「提高对比度」的暗色系统判成浅色。主题失败一律
   降级为该表面保持系统外观，不报错、不改配置、不阻止启动。
-- `appearance.language` 只接受 `system`、`zh-CN`、`zh-TW`、`en-US`、`ar-SA`、`vi-VN`、`pt-BR`、`ko-KR` 和 `fr-FR` 九个当前 v1 值，默认 `system`。
+- `appearance.language` 只接受 `system`、`zh-CN`、`zh-TW`、`en-US`、`ar-SA`、`vi-VN`、`pt-BR`、`ko-KR`、`fr-FR` 和 `ru-RU` 十个当前 v1 值，默认 `system`。
   平台 adapter 在启动时读取系统首选 locale，并按 primary subtag 归类（RFC 4647 language-subtag
   fallback）：`ar`、`ar-EG`、`ar-SA` 等阿拉伯语 locale 归为 `ar-SA`，`vi` 与 `vi-VN` 归为 `vi-VN`，
-  `pt` 与 `pt-PT` 归为 `pt-BR`，`ko` 归为 `ko-KR`，`fr`、`fr-CA` 等法语 locale 归为 `fr-FR`，简繁之外的英语 locale 归为 `en-US`。`zh` 是
+  `pt` 与 `pt-PT` 归为 `pt-BR`，`ko` 归为 `ko-KR`，`fr`、`fr-CA` 等法语 locale 归为 `fr-FR`，
+  `ru`、`ru-KZ` 等俄语 locale 归为 `ru-RU`，简繁之外的英语 locale 归为 `en-US`。`zh` 是
   primary subtag 唯一无法判定的情形：简繁是不同书写体系而非地区变体，因此 `zh-Hant` 与 `TW`/`HK`/`MO`
   归为 `zh-TW`，其余 `zh` 标签归为 `zh-CN`。
   其它 locale 也回退 `en-US`，不把解析结果写回配置。UI 通过独立 `SettingsLanguage`、revision-checked typed
@@ -896,7 +893,7 @@ Windows 验收覆盖 PixPin `Ctrl+Alt+A`、Win+L、PrintScreen、UAC、管理员
   调用同一棵菜单树，不借用托盘状态项。登录启动在 macOS 13+ Production `.app` 使用
   `SMAppService.mainAppService`。macOS 12 和 Development 构建明确报告 capability unsupported，不回退到
   废弃 API 或自行写 LaunchAgent。
-- 发布：Hardened Runtime、签名、notarization 和 TCC 权限说明。
+- 发布：ad-hoc 签名、未公证分发限制和 TCC 权限说明。
 
 平台 `unsafe` 必须集中在小型 wrapper，写明安全不变量并有 smoke test。业务和 UI crate 默认禁止 `unsafe_code`。
 
@@ -1513,8 +1510,10 @@ resolver，不接受外部 `StorageLayout`、根目录或生产路径覆盖；�
   macOS bundle 名全部是编译期常量，任何用户配置、CLI 或运行时输入都不能改变它们。Development
   构建的 channel 不允许联网或安装，`check` 与 `install` 在发出任何请求前即失败关闭；Production
   构建从公开发行渠道更新。更新 channel 按环境隔离是 `AGENTS.md` §10 的约束，独立于各 ADR。
-- 签名公钥缺失时失败关闭：`RELEASE_SIGNING_KEY` 已内嵌发布公钥（key ID
-  `DF5E2C9D255DD85E`）；缺失、空串或纯空白时 runtime 在发出任何请求前即返回
+- 签名公钥缺失时失败关闭：应用公钥以 `release-trust/app.pub` 为版本化事实来源，并由
+  `RELEASE_SIGNING_KEY` 在编译期嵌入（key ID `DF5E2C9D255DD85E`）；插件公钥独立位于
+  `release-trust/plugin.pub`，由 `PLUGIN_RELEASE_SIGNING_KEY` 编译期嵌入。运行时绝不从
+  可写配置路径读取公钥。应用公钥缺失、空串或纯空白时 runtime 在发出任何请求前即返回
   `update_signature_key_missing`，绝不静默接受未签名载荷。`UpdateRuntime::is_available()` 仅在
   production channel 与有效公钥同时具备时为真，系统菜单据此决定是否在托盘根中创建「检查更新」入口；该
   门禁产出的是稳定、无路径的错误码，而不是库错误。
@@ -1608,7 +1607,7 @@ resolver，不接受外部 `StorageLayout`、根目录或生产路径覆盖；�
 - 传输有 30 分钟上限：transport 自身无超时，不设界会让 worker 永久阻塞；取值覆盖整条载荷传输。
   下载**不支持取消**——库没有 abort 钩子，真取消只能自研下载与验签，而自研验证层已被 ADR-0029/0034
   删除，因此不提供取消按钮而不是提供一个假的。
-- 真实签名公钥注入、真实发布链路验证、操作系统包签名验证与失败启动恢复仍未完成；在这些证据齐备前
+- 真实更新签名公钥注入、真实发布链路验证与失败启动恢复仍未完成；在这些证据齐备前
   不得声称更新功能或 stable 发布完成。ADR-0034 记录了换实现新引入的能力损失（归档完整性校验、
   per-platform 资产匹配、公钥轮换窗）与待验证项；ADR-0035 记录了 worker、窗口、发布说明与
   "安装后协调 shutdown 而非安装前"这一处需要维护者复核的取舍。
@@ -1755,7 +1754,7 @@ Bundle ID 固定为 `com.ayangweb.bongo-cat`。Development 与 Production 使用
 
 ### ADR-011：渐进实现与发布门禁分离
 
-允许正式 Rust workspace 在外部证据补齐期间持续开发；Cubism 授权与分发、实机矩阵、签名和稳定性证据保持 stable 发布门禁。
+允许正式 Rust workspace 在外部证据补齐期间持续开发；Cubism 授权与分发、实机矩阵、更新签名和稳定性证据保持 stable 发布门禁。macOS Developer ID 签名、公证与 Windows Authenticode 不属于发布门禁。
 
 ### ADR-012：有序 Motion 音频服务
 

@@ -30,6 +30,9 @@ I18N_LOCALES = ROOT / "crates" / "bongocat-i18n" / "locales"
 VIETNAMESE_INSTALLER_STRINGS = (
     ROOT / "crates" / "bongocat-packaging" / "installer" / "Vietnamese.nsh"
 )
+RUSSIAN_INSTALLER_STRINGS = (
+    ROOT / "crates" / "bongocat-packaging" / "installer" / "Russian.nsh"
+)
 JUSTFILE = ROOT / "justfile"
 MACOS_INFO = ROOT / "macos" / "Info.plist"
 APP_PRESET_ROOT = ROOT / "crates" / "bongocat-app" / "src" / "preset_root.rs"
@@ -37,7 +40,7 @@ WINDOWS_RESOURCE = ROOT / "crates" / "bongocat-app" / "windows" / "bongocat-app.
 UPDATE_RELEASE = ROOT / "crates" / "bongocat-update" / "src" / "release.rs"
 DEPENDENCY_POLICY = ROOT / "deny.toml"
 WORKFLOW_DIRECTORY = ROOT / ".github" / "workflows"
-RELEASE_WORKFLOW = WORKFLOW_DIRECTORY / "release.yml"
+RELEASE_WORKFLOW = WORKFLOW_DIRECTORY / "app-release.yml"
 
 
 def read(path):
@@ -103,6 +106,7 @@ class PackagingTargetTests(unittest.TestCase):
             "pt-BR": "PortugueseBR",
             "ko-KR": "Korean",
             "fr-FR": "French",
+            "ru-RU": "Russian",
         }
         catalogs = {path.stem for path in I18N_LOCALES.glob("*.json")}
         self.assertEqual(catalogs, set(nsis_languages))
@@ -114,29 +118,49 @@ class PackagingTargetTests(unittest.TestCase):
         self.assertEqual(sorted(languages), sorted(nsis_languages.values()))
         self.assertEqual(languages[0], "English", "English is the fallback language")
 
-        # cargo-packager embeds no strings for Vietnamese, so the repository carries the
-        # messages its installer template looks up.
-        raw = VIETNAMESE_INSTALLER_STRINGS.read_bytes()
-        self.assertTrue(raw.startswith(b"\xef\xbb\xbf"), "NSIS needs the UTF-8 BOM")
-        names = re.findall(
-            r"^LangString (\w+) \$\{LANG_VIETNAMESE\} ",
-            raw.decode("utf-8-sig"),
-            re.MULTILINE,
-        )
-        self.assertEqual(
-            sorted(names),
-            sorted(
-                [
-                    "addOrReinstall", "alreadyInstalled", "alreadyInstalledLong",
-                    "appRunning", "appRunningOkKill", "chooseMaintenanceOption",
-                    "choowHowToInstall", "createDesktop", "deleteAppData",
-                    "dontUninstall", "dontUninstallDowngrade", "failedToKillApp",
-                    "newerVersionInstalled", "older", "olderOrUnknownVersionInstalled",
-                    "silentDowngrades", "unableToUninstall", "uninstallApp",
-                    "uninstallBeforeInstalling", "unknown",
-                ]
-            ),
-        )
+        # cargo-packager embeds no strings for Vietnamese and Russian, so the repository
+        # carries the messages its installer template looks up.
+        for path, macro in (
+            (VIETNAMESE_INSTALLER_STRINGS, "${LANG_VIETNAMESE}"),
+            (RUSSIAN_INSTALLER_STRINGS, "${LANG_RUSSIAN}"),
+        ):
+            with self.subTest(language=path.stem):
+                raw = path.read_bytes()
+                self.assertTrue(
+                    raw.startswith(b"\xef\xbb\xbf"), "NSIS needs the UTF-8 BOM"
+                )
+                names = re.findall(
+                    r"^LangString (\w+) " + re.escape(macro) + " ",
+                    raw.decode("utf-8-sig"),
+                    re.MULTILINE,
+                )
+                self.assertEqual(
+                    sorted(names),
+                    sorted(
+                        [
+                            "addOrReinstall",
+                            "alreadyInstalled",
+                            "alreadyInstalledLong",
+                            "appRunning",
+                            "appRunningOkKill",
+                            "chooseMaintenanceOption",
+                            "choowHowToInstall",
+                            "createDesktop",
+                            "deleteAppData",
+                            "dontUninstall",
+                            "dontUninstallDowngrade",
+                            "failedToKillApp",
+                            "newerVersionInstalled",
+                            "older",
+                            "olderOrUnknownVersionInstalled",
+                            "silentDowngrades",
+                            "unableToUninstall",
+                            "uninstallApp",
+                            "uninstallBeforeInstalling",
+                            "unknown",
+                        ]
+                    ),
+                )
 
     def test_windows_installer_is_published_under_the_product_release_name(self):
         # cargo-packager names the NSIS installer after the main binary and
@@ -229,8 +253,8 @@ class PackagingTargetTests(unittest.TestCase):
     def test_a_step_named_require_actually_fails_the_build(self):
         # A step called "Require X" that only warns is worse than no name at all:
         # a maintainer scanning a green log reads it as proof X was enforced. The
-        # update-signing gate really does exit 1; the Authenticode step cannot,
-        # because CI has no certificate configured, so it is named for what it does.
+        # The update-signing gate really does exit 1. OS code signing is not a
+        # release gate and therefore has no Require step in this workflow.
         workflow = read(RELEASE_WORKFLOW)
 
         enforcing = re.findall(r"- name: (Require [^\n]+)\n(.*?)(?=\n      - )", workflow, re.DOTALL)
@@ -242,13 +266,7 @@ class PackagingTargetTests(unittest.TestCase):
                     f"{name} does not fail the build, so it must not be named Require",
                 )
 
-        reporting = re.search(
-            r"- name: (Report Authenticode[^\n]+)\n(.*?)(?=\n      - )", workflow, re.DOTALL
-        )
-        self.assertIsNotNone(reporting, "the Authenticode step must say it reports")
-        self.assertIn("::warning::", reporting.group(2))
-        self.assertNotIn("exit 1", reporting.group(2))
-        self.assertNotIn("Authenticode signatures for a stable release\"", workflow)
+        self.assertNotIn("Authenticode", workflow)
 
     def test_both_build_jobs_name_the_build_step_the_same_way(self):
         # The two jobs run the same operation on different machines, and the

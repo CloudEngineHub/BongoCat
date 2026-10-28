@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.1 - 2026-10-28
+
+### 🎨 Interface
+
+- Changed the model library delete button to red to make it easier to recognize.
+
+### 🌍 Localization
+
+- Added Russian localization.
+
 ## 2.4.0 - 2026-10-26
 
 ### ✨ Features

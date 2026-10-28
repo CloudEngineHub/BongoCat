@@ -7,7 +7,7 @@
 > UI 文案的书写规范另见 `docs/localization-copy-conventions.md`；该文 §1.2 明确把
 > `CHANGELOG` 排除在自己的适用范围之外，所以两套规范互不覆盖。
 
-适用范围：两份应用 CHANGELOG；插件仓库维护自己的 CHANGELOG。§1 的固定词表只约束
+适用范围：两份应用 CHANGELOG 与两份插件 CHANGELOG。§1 的固定词表只约束
 **版本条目内**的变更分段标题，
 版本标题（`## <version> - <date>`）另见 §2。
 
@@ -150,7 +150,7 @@ chore: release v2.0.0
 
 ### 3.1 怎么强制
 
-`.github/workflows/release.yml` 的「Check the tag against the single product version
+`.github/workflows/app-release.yml` 的「Check the tag against the single product version
 source」步骤在**构建之前**就断言这件事，所以标题写错只需几秒就失败，而不是等三个平台
 白跑二十分钟：
 
@@ -178,4 +178,34 @@ git push origin master && git push origin v2.0.0
 ```sh
 just release-notes release-notes.md
 ```
+
+### 3.3 插件发布提交
+
+插件使用同一套发布提交规则，但标签命名空间是 `plugins-v<version>`，标题必须逐字为：
+
+```text
+chore: release plugins-v1.0.0
+```
+
+发布 commit 只更新 `plugins/*/Cargo.toml`、`plugins/*/plugin.json` 中的插件版本，以及
+`plugins/CHANGELOG.md`、`plugins/CHANGELOG.zh-CN.md` 对应条目的日期；功能修复先单独提交。
+随后在 `master` 上打附注 tag `plugins-v<version>` 并推送，流水线会验证 tag、版本、双语
+changelog 和提交标题，再构建三个平台并以非 Latest Release 发布。
+
+### 3.4 GitHub Release 标题
+
+**规则：Release 标题是「产品名 + 裸版本号」，不带 tag 的 `v` 前缀。**
+
+- 应用：`BongoCat <version>`，例如 `BongoCat 2.4.0`。
+- 插件：`BongoCat Plugins <version>`，例如 `BongoCat Plugins 1.0.0`。
+
+版本号取 `just version` 打印的裸值，`v` 只是 tag 命名空间，不进入面向用户的标题。
+字段来源与呈现分工：产物的 `CFBundleShortVersionString`、更新 manifest、App 内 About、
+changelog 版本标题全是裸 `x.y.z`，Release 标题与它们保持一致；tag 身份由 Release 页与
+`gh release list` 的 tag 列单独显示，不需要写进标题。
+
+标题由流水线生成，不手写：应用在 `.github/workflows/app-release.yml` 的 publish job 用
+`--title "BongoCat ${GITHUB_REF_NAME#v}"`，插件在 `.github/workflows/plugin-release.yml`
+用 `--title "BongoCat Plugins ${RELEASE_TAG#plugins-v}"`。回填或更正历史 Release 标题时用
+同一条「产品名 + 裸版本号」规则，不改 tag、不改发布 commit 标题。
 
